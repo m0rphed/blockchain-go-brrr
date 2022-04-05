@@ -21,10 +21,10 @@ idea:
 */
 
 // steps:
-//		take a data from the block
-//		create a counter (nonce) which starts at 0
-//		create a hash of the data plus the counter
-//		check the hash to see if it meets a set of requirements
+//		- take a data from the block
+//		- create a counter (nonce) which starts at 0
+//		- create a hash of the data plus the counter
+//		- check the hash to see if it meets a set of requirements
 //		<repeat the last step if requirements was not met>
 
 // requirements (=difficulty, which gets (could be) adjusted over the time):
@@ -32,6 +32,10 @@ idea:
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
+	"log"
+	"math"
 	"math/big"
 )
 
@@ -63,13 +67,58 @@ func NewProof(b *Block) *ProofOfWork {
 	return pow
 }
 
-func (pow *ProofOfWork) InitData(nonce int) []byte { // stopped 👉 7:16
+// InitData helps combine data with the nonce
+func (pow *ProofOfWork) InitData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
 			pow.Block.PrevHash,
 			pow.Block.Data,
+			// cast nonce and difficulty
+			// to int64, then convert to bytes
+			ToHex(int64(nonce)),
+			ToHex(int64(Difficulty)),
 		},
 		[]byte{},
 	)
 	return data
+}
+
+func (pow *ProofOfWork) Run() (int, []byte) {
+	var intHash big.Int
+	var hash [32]byte
+
+	nonce := 0
+	for nonce < math.MaxInt64 {
+		data := pow.InitData(nonce) // prepare data
+		hash = sha256.Sum256(data)  // hash the data
+		// convert hash to big integer
+		intHash.SetBytes(hash[:])
+
+		// compare the new hash to the PoW target
+		if intHash.Cmp(pow.Target) == -1 {
+			// if hash is smaller than target
+			// then we have a valid hash
+			// (means: we can sign the block)
+			// and we can return it
+			return nonce, hash[:]
+		} else {
+			nonce++
+		}
+	}
+	return nonce, hash[:]
+}
+
+func (pow *ProofOfWork) Validate() bool { // stopped 👉 12:40
+	return false // todo: implement
+}
+
+// ToHex converts a number to a byte array
+func ToHex(num int64) []byte {
+	buff := new(bytes.Buffer)
+	// organize the data in big endian notation
+	err := binary.Write(buff, binary.BigEndian, num)
+	if err != nil {
+		log.Panic(err)
+	}
+	return buff.Bytes()
 }
