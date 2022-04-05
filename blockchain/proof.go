@@ -34,6 +34,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math"
 	"math/big"
@@ -45,7 +46,7 @@ import (
 //		- numbers of miners - increases,
 //		- computational power - increases (also in general)
 //	...and we need to make the time to mine a block stay the same, and block rates stay the same.
-const Difficulty = 12
+const Difficulty = 18
 
 type ProofOfWork struct {
 	Block *Block
@@ -91,6 +92,8 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	for nonce < math.MaxInt64 {
 		data := pow.InitData(nonce) // prepare data
 		hash = sha256.Sum256(data)  // hash the data
+
+		fmt.Printf("\r%x", hash) // printing: see the result
 		// convert hash to big integer
 		intHash.SetBytes(hash[:])
 
@@ -105,11 +108,35 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 			nonce++
 		}
 	}
+	fmt.Println() // printing: separator
 	return nonce, hash[:]
 }
 
-func (pow *ProofOfWork) Validate() bool { // stopped 👉 12:40
-	return false // todo: implement
+/*
+ `Validate` function idea:
+ 	after we run the PoW `Run` func. - we have the nonce,
+	which will allow us to derive
+	the hash which met the `target` we wanted,
+	and then we'll be able to run that cycle again
+	to show that the hash is valid.
+
+	=> security: based on idea that you want change a block inside the chain
+		-- you'll have to recalculate the hash itself (large amount of time),
+		and then recalculate each block's hash (after that block) as well to validate the data.
+
+		So, the actual work to create/sign a block is very difficult/time-consuming,
+		when validation is pretty easy.
+*/
+
+// Validate validates the proof of work
+func (pow *ProofOfWork) Validate() bool {
+	var intHash big.Int
+
+	data := pow.InitData(pow.Block.Nonce)
+	hash := sha256.Sum256(data)
+
+	intHash.SetBytes(hash[:])
+	return intHash.Cmp(pow.Target) == -1
 }
 
 // ToHex converts a number to a byte array
