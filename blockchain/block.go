@@ -1,8 +1,5 @@
 package blockchain
 
-type BlockChain struct {
-	Blocks []*Block
-}
 
 type Block struct {
 	Hash     []byte
@@ -25,19 +22,8 @@ func CreateBlock(data string, prevHash []byte) *Block {
 	return block
 }
 
-// AddBlock adds new block to blockchain with specified data
-func (chain *BlockChain) AddBlock(data string) {
-	prevBlock := chain.Blocks[len(chain.Blocks)-1]
-	new := CreateBlock(data, prevBlock.Hash)
-	chain.Blocks = append(chain.Blocks, new)
-}
-
 // Genesis adds "genesis block"
 // - because the impl. requires a first block to always exist in the chain
 func Genesis() *Block {
 	return CreateBlock("Genesis", []byte{})
-}
-
-func InitBlockChain() *BlockChain {
-	return &BlockChain{[]*Block{Genesis()}}
 }
