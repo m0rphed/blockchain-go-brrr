@@ -1,3 +1,3 @@
 module github.com/m0rphed/blockchain-go-brrr
 
-go 1.18
+go 1.20
